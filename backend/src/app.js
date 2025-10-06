@@ -1,13 +1,47 @@
-import express from 'express';
+import express from "express";
+import cors from "cors";
+import { clerkMiddleware } from "@clerk/express";
 
+import userRoutes from "./routes/user.route.js";
+import postRoutes from "./routes/post.route.js";
+import commentRoutes from "./routes/comment.route.js";
+import notificationRoutes from "./routes/notification.route.js";
+
+import { ENV } from "./config/env.js";
+
+
+import { connectToDatabase } from "./config/db.js";
+import { arcjetMiddleware } from "./middlewares/arcjet.middleware.js";
 const app = express();
 
-// Middleware to parse JSON bodies
+app.use(cors());
 app.use(express.json());
-app.get('/', (req, res) => {
-  res.send('Hello World!');
+
+app.use(clerkMiddleware());
+app.use(arcjetMiddleware);
+
+app.get("/", (req, res) => res.send("Hello from server"));
+
+app.use("/api/users", userRoutes);
+app.use("/api/posts", postRoutes);
+app.use("/api/comments", commentRoutes);
+app.use("/api/notifications", notificationRoutes);
+
+// error handling middleware
+app.use((err, req, res, next) => {
+  console.error("Unhandled error:", err);
+  res.status(500).json({ error: err.message || "Internal server error" });
 });
 
-app.listen(3000, () => {
-  console.log('Server is running on http://localhost:3000');
+
+app.get("/", (req, res) => {
+  res.send("Hello World!");
+});
+
+app.listen(ENV.PORT, async () => {
+  await connectToDatabase();
+  console.log("Server is running on http://localhost:" + ENV.PORT);
+   if (ENV.NODE_ENV !== "production") {
+      app.listen(ENV.PORT, () => console.log("Server is up and running on PORT:", ENV.PORT));
+    }
 });
